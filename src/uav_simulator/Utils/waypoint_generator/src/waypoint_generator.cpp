@@ -10,7 +10,7 @@
 #include <deque>
 #include <boost/format.hpp>
 #include <tf2/LinearMath/Quaternion.h>
-#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 #include <tf2_ros/transform_listener.h>
 #include <eigen3/Eigen/Dense>
 #include <typeinfo>
@@ -61,9 +61,13 @@ void load_seg( int segid, const rclcpp::Time& time_base) {
     double time_from_start;
     RCLCPP_INFO(this->get_logger(), "Getting segment %d", segid);
     this->get_parameter(seg_str + "yaw", yaw);
-    RCLCPP_EXPORT(this->get_logger(), (yaw > -3.1499999) && (yaw < 3.14999999));
+    if (!((yaw > -3.1499999) && (yaw < 3.14999999))) {
+        RCLCPP_WARN(this->get_logger(), "seg yaw out of expected range: %.3f", yaw);
+    }
     this->get_parameter(seg_str + "time_from_start", time_from_start);
-    RCLCPP_EXPORT(this->get_logger(), time_from_start >= 0.0);
+    if (time_from_start < 0.0) {
+        RCLCPP_WARN(this->get_logger(), "negative time_from_start: %.3f", time_from_start);
+    }
 
     std::vector<double> ptx;
     std::vector<double> pty;
@@ -73,8 +77,13 @@ void load_seg( int segid, const rclcpp::Time& time_base) {
     this->get_parameter(seg_str + "y", pty);
     this->get_parameter(seg_str + "z", ptz);
 
-    RCLCPP_EXPORT(this->get_logger(), ptx.size());
-    RCLCPP_EXPORT(this->get_logger(), ptx.size() == pty.size() && ptx.size() == ptz.size());
+    if (ptx.empty()) {
+        RCLCPP_WARN(this->get_logger(), "empty segment waypoint list for seg %d", segid);
+    }
+    if (!(ptx.size() == pty.size() && ptx.size() == ptz.size())) {
+        RCLCPP_ERROR(this->get_logger(), "segment xyz size mismatch");
+        return;
+    }
 
     nav_msgs::msg::Path path_msg;
 
@@ -168,7 +177,7 @@ void odom_callback(const nav_msgs::msg::Odometry::SharedPtr msg) {
                             pose_stamped.pose.orientation.x % pose_stamped.pose.orientation.y %
                             pose_stamped.pose.orientation.z << std::endl;
             }
-            RCLCPP_INFO(this->get_logger(), ss.str());
+            RCLCPP_INFO(this->get_logger(), "%s", ss.str().c_str());
 
             publish_waypoints_vis();
             publish_waypoints();
@@ -238,6 +247,7 @@ void goal_callback(const geometry_msgs::msg::PoseStamped::SharedPtr msg) {
 }
 
 void traj_start_trigger_callback(const geometry_msgs::msg::PoseStamped::SharedPtr msg) {
+    (void)msg;
     if (!is_odom_ready) {
         RCLCPP_ERROR(this->get_logger(), "No odom!");
         return;

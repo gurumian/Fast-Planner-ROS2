@@ -24,6 +24,7 @@ find_package(std_msgs REQUIRED)
 find_package(visualization_msgs REQUIRED)
 find_package(cv_bridge REQUIRED)
 find_package(message_filters REQUIRED)
+find_package(pcl_conversions REQUIRED)
 find_package(fast_planner REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(PCL 1.7 REQUIRED)
@@ -88,6 +89,7 @@ ament_target_dependencies(plan_env
   geometry_msgs
   cv_bridge
   message_filters
+  pcl_conversions
   fast_planner
 )
 
@@ -137,16 +139,19 @@ ament_export_include_directories(include)
 ament_export_libraries(plan_env)
 ament_export_libraries(test_plan_env_sdf)
 ament_export_dependencies(
-    # rclcpp
-    # std_msgs
-    # visualization_msgs
+    rclcpp
+    rclpy
+    std_msgs
+    nav_msgs
+    geometry_msgs
+    visualization_msgs
+    cv_bridge
     fast_planner
     message_filters
+    pcl_conversions
     Eigen3
     PCL
     OpenCV
-    # nav_msgs
-    # plan_env
 )
 # ament_export_include_directories(include)
 ament_package()

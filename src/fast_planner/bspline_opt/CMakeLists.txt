@@ -25,7 +25,20 @@ find_package(visualization_msgs REQUIRED)
 find_package(cv_bridge REQUIRED)
 find_package(plan_env REQUIRED)
 find_package(Eigen3 REQUIRED)
-find_package(NLopt REQUIRED)
+find_package(NLopt QUIET)
+if(NOT NLopt_FOUND)
+  find_package(nlopt QUIET)
+endif()
+if(NOT NLopt_FOUND AND NOT nlopt_FOUND)
+  find_path(NLOPT_INCLUDE_DIR nlopt.hpp)
+  find_library(NLOPT_CXX_LIBRARY NAMES nlopt_cxx)
+  find_library(NLOPT_LIBRARY NAMES nlopt)
+  if(NOT NLOPT_INCLUDE_DIR OR (NOT NLOPT_CXX_LIBRARY AND NOT NLOPT_LIBRARY))
+    message(FATAL_ERROR
+      "NLopt not found. Install development package (e.g. libnlopt-cxx-dev) "
+      "or set NLOPT_INCLUDE_DIR/NLOPT_CXX_LIBRARY/NLOPT_LIBRARY manually.")
+  endif()
+endif()
 find_package(fast_planner REQUIRED)
 
 include_directories( 
@@ -34,6 +47,8 @@ include_directories(
     ${Eigen3_INCLUDE_DIRS} 
     ${PCL_INCLUDE_DIRS}
     ${NLopt_INCLUDE_DIRS}
+    ${NLOPT_INCLUDE_DIRS}
+    ${NLOPT_INCLUDE_DIR}
     ${plan_env_INCLUDE_DIRS}
 )
 
@@ -53,8 +68,15 @@ ament_target_dependencies(bspline_opt
 
 target_link_libraries(bspline_opt
     Eigen3::Eigen
-    NLopt::nlopt
-) 
+)
+
+if(TARGET NLopt::nlopt)
+  target_link_libraries(bspline_opt NLopt::nlopt)
+elseif(TARGET nlopt::nlopt)
+  target_link_libraries(bspline_opt nlopt::nlopt)
+else()
+  target_link_libraries(bspline_opt ${NLOPT_CXX_LIBRARY} ${NLOPT_LIBRARY})
+endif()
 
 install(DIRECTORY include/
   DESTINATION include/)  

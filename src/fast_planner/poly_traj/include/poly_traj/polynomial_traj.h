@@ -63,7 +63,7 @@ public:
   void init() {
     num_seg = times.size();
     time_sum = 0.0;
-    for (int i = 0; i < times.size(); ++i) {
+    for (size_t i = 0; i < times.size(); ++i) {
       time_sum += times[i];
     }
   }
@@ -165,7 +165,7 @@ public:
     length = 0.0;
 
     Eigen::Vector3d p_l = traj_vec3d[0], p_n;
-    for (int i = 1; i < traj_vec3d.size(); ++i) {
+    for (size_t i = 1; i < traj_vec3d.size(); ++i) {
       p_n = traj_vec3d[i];
       length += (p_n - p_l).norm();
       p_l = p_n;
@@ -175,16 +175,18 @@ public:
 
   double getMeanVel() {
     double mean_vel = length / time_sum;
+    return mean_vel;
   }
 
   double getAccCost() {
     double cost = 0.0;
     int order = cxs[0].size();
 
-    for (int s = 0; s < times.size(); ++s) {
+    for (size_t s = 0; s < times.size(); ++s) {
+      const int si = static_cast<int>(s);
       Eigen::Vector3d um;
-      um(0) = 2 * cxs[s][order - 3], um(1) = 2 * cys[s][order - 3], um(2) = 2 * czs[s][order - 3];
-      cost += um.squaredNorm() * times[s];
+      um(0) = 2 * cxs[si][order - 3], um(1) = 2 * cys[si][order - 3], um(2) = 2 * czs[si][order - 3];
+      cost += um.squaredNorm() * times[si];
     }
 
     return cost;
@@ -194,20 +196,21 @@ public:
     double jerk = 0.0;
 
     /* evaluate jerk */
-    for (int s = 0; s < times.size(); ++s) {
-      Eigen::VectorXd cxv(cxs[s].size()), cyv(cys[s].size()), czv(czs[s].size());
+    for (size_t s = 0; s < times.size(); ++s) {
+      const int si = static_cast<int>(s);
+      Eigen::VectorXd cxv(cxs[si].size()), cyv(cys[si].size()), czv(czs[si].size());
       /* convert coefficient */
-      int order = cxs[s].size();
+      int order = cxs[si].size();
       for (int j = 0; j < order; ++j) {
-        cxv(j) = cxs[s][order - 1 - j], cyv(j) = cys[s][order - 1 - j], czv(j) = czs[s][order - 1 - j];
+        cxv(j) = cxs[si][order - 1 - j], cyv(j) = cys[si][order - 1 - j], czv(j) = czs[si][order - 1 - j];
       }
-      double ts = times[s];
+      double ts = times[si];
 
       /* jerk matrix */
       Eigen::MatrixXd mat_jerk(order, order);
       mat_jerk.setZero();
-      for (double i = 3; i < order; i += 1)
-        for (double j = 3; j < order; j += 1) {
+      for (int i = 3; i < order; ++i)
+        for (int j = 3; j < order; ++j) {
           mat_jerk(i, j) =
               i * (i - 1) * (i - 2) * j * (j - 1) * (j - 2) * pow(ts, i + j - 5) / (i + j - 5);
         }
@@ -223,23 +226,24 @@ public:
   void getMeanAndMaxVel(double& mean_v, double& max_v) {
     int num = 0;
     mean_v = 0.0, max_v = -1.0;
-    for (int s = 0; s < times.size(); ++s) {
-      int order = cxs[s].size();
+    for (size_t s = 0; s < times.size(); ++s) {
+      const int si = static_cast<int>(s);
+      int order = cxs[si].size();
       Eigen::VectorXd vx(order - 1), vy(order - 1), vz(order - 1);
 
       /* coef of vel */
       for (int i = 0; i < order - 1; ++i) {
-        vx(i) = double(i + 1) * cxs[s][order - 2 - i];
-        vy(i) = double(i + 1) * cys[s][order - 2 - i];
-        vz(i) = double(i + 1) * czs[s][order - 2 - i];
+        vx(i) = double(i + 1) * cxs[si][order - 2 - i];
+        vy(i) = double(i + 1) * cys[si][order - 2 - i];
+        vz(i) = double(i + 1) * czs[si][order - 2 - i];
       }
-      double ts = times[s];
+      double ts = times[si];
 
       double eval_t = 0.0;
       while (eval_t < ts) {
         Eigen::VectorXd tv(order - 1);
         for (int i = 0; i < order - 1; ++i)
-          tv(i) = pow(ts, i);
+          tv(i) = pow(eval_t, i);
         Eigen::Vector3d vel;
         vel(0) = tv.dot(vx), vel(1) = tv.dot(vy), vel(2) = tv.dot(vz);
         double vn = vel.norm();
@@ -257,23 +261,24 @@ public:
   void getMeanAndMaxAcc(double& mean_a, double& max_a) {
     int num = 0;
     mean_a = 0.0, max_a = -1.0;
-    for (int s = 0; s < times.size(); ++s) {
-      int order = cxs[s].size();
+    for (size_t s = 0; s < times.size(); ++s) {
+      const int si = static_cast<int>(s);
+      int order = cxs[si].size();
       Eigen::VectorXd ax(order - 2), ay(order - 2), az(order - 2);
 
       /* coef of acc */
       for (int i = 0; i < order - 2; ++i) {
-        ax(i) = double((i + 2) * (i + 1)) * cxs[s][order - 3 - i];
-        ay(i) = double((i + 2) * (i + 1)) * cys[s][order - 3 - i];
-        az(i) = double((i + 2) * (i + 1)) * czs[s][order - 3 - i];
+        ax(i) = double((i + 2) * (i + 1)) * cxs[si][order - 3 - i];
+        ay(i) = double((i + 2) * (i + 1)) * cys[si][order - 3 - i];
+        az(i) = double((i + 2) * (i + 1)) * czs[si][order - 3 - i];
       }
-      double ts = times[s];
+      double ts = times[si];
 
       double eval_t = 0.0;
       while (eval_t < ts) {
         Eigen::VectorXd tv(order - 2);
         for (int i = 0; i < order - 2; ++i)
-          tv(i) = pow(ts, i);
+          tv(i) = pow(eval_t, i);
         Eigen::Vector3d acc;
         acc(0) = tv.dot(ax), acc(1) = tv.dot(ay), acc(2) = tv.dot(az);
         double an = acc.norm();

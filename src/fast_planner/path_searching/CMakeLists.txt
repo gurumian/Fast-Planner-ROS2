@@ -47,6 +47,7 @@ ament_target_dependencies(path_searching
   rclpy
   std_msgs
   plan_env
+  visualization_msgs
   cv_bridge
 ) 
 
